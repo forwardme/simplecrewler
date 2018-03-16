@@ -1,6 +1,8 @@
 ﻿import re
 import urllib2
 import urlparse
+import csv
+import lxml.html
 
 def download(url,user_agent='wcwp',num_retries = 2):
 	print 'Downloading:',url
@@ -29,7 +31,7 @@ def crawl_sitemap(url):
 		html = download(link)
 		#scrape html here
 		
-def link_crawler(seed_url, link_regex, max_depth=2):
+def link_crawler(seed_url, link_regex, max_depth=2, scrape_callback=None):
 	'''Crawl from the given seed URL following links matched by link_regex'''
 	crawl_queue = [seed_url]
 	#keep track which URL's have seen before
@@ -40,6 +42,8 @@ def link_crawler(seed_url, link_regex, max_depth=2):
 		#not go further than max_depth layers of links
 		if depth < max_depth:
 			html = download(url)
+			if scrape_callback:
+				scrape_callback(url,html)
 			#filter for links matching our regular expression
 			for link in get_links(html):
 				if re.search(link_regex, link[1]):
@@ -85,10 +89,27 @@ class Throttle:
 				time.sleep(sleep_secs)
 		#update the last accessed time
 		self.domains[domain] = datetime.datetime.now()	
-	
+
+class ScrapeCallback:
+	def __init__(self):
+		self.writer = csv.writer(open('countries.csv','w+'))
+		self.fields = ['area','population','iso','country','capital',
+		               'continent','tld','currency_code','currency_name',
+		               'phone','postal_code_format','postal_code_regex',
+		               'languages','neighbours']
+		self.writer.writerow(self.fields)
+		
+	def __call__(self, url, html):
+		if re.search('/view/',url):
+			tree = lxml.html.fromstring(html)
+			row = []
+			for field in self.fields:
+				row.append(tree.cssselect('table>tr#places_{}__row>td.w2p_fw'.format(field))[0].text_content())
+			self.writer.writerow(row)
+				
 		
 if __name__ == '__main__':
 	#test_function('http://example.webscraping.com',get_links,'/(index|view)')
-	link_crawler('http://example.webscraping.com','/view/')
+	link_crawler('http://example.webscraping.com','/view/',scrape_callback = ScrapeCallback())
 	#crawl_sitemap('http://example.webscraping.com')
 	
