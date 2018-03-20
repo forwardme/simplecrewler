@@ -1,6 +1,8 @@
 ﻿import re
 import urllib2
 import urlparse
+import csv
+import lxml.html
 
 def download(url,user_agent='wcwp',num_retries = 2):
 	print 'Downloading:',url
@@ -22,33 +24,40 @@ def crawl_sitemap(url):
 	sitemap = download(url)
 	#print sitemap
 	#extract the sitemap links
-	links = re.findall('<a[^>]+href=["\'](.*?)["\']', sitemap)
+	links = re.findall('<td(.*?)<a[^>]+href=["\'](.*?)["\']', sitemap)
 	#download each link
 	for link in links:
-		link = urlparse.urljoin(url,link)
+		link = urlparse.urljoin(url,link[1])
 		html = download(link)
 		#scrape html here
 		
-def link_crawler(seed_url, link_regex):
+def link_crawler(seed_url, link_regex, max_depth=2, scrape_callback=None):
 	'''Crawl from the given seed URL following links matched by link_regex'''
 	crawl_queue = [seed_url]
 	#keep track which URL's have seen before
-	seen = set(crawl_queue)
+	seen = {seed_url:0}
 	while crawl_queue:
 		url = crawl_queue.pop()
-		html = download(url)
-		#filter for links matching our regular expression
-		for link in get_links(html):
-			if re.search(link_regex, link):
-				link = urlparse.urljoin(seed_url,link)
-				if link not in seen:
-					seen.add(link)
-					crawl_queue.append(link)
+		depth = seen[url]
+		#not go further than max_depth layers of links
+		if depth < max_depth:
+			html = download(url)
+			if scrape_callback:
+				scrape_callback(url,html)
+			#filter for links matching our regular expression
+			for link in get_links(html):
+				if re.search(link_regex, link[1]):
+					link = urlparse.urljoin(seed_url,link[1])
+					if link not in seen:
+						seen[link] = depth + 1
+						crawl_queue.append(link)
+		else:
+			print 'link: %.20s' %url[51:],' is deeper than max_depth, abort.'
 
 def get_links(html):
 	'''Return a list of links from html'''
 	#a regular expression to extract all links from the webpage
-	webpage_regex = re.compile('<a[^>]+href=["\'](.*?)["\']', re.IGNORECASE)
+	webpage_regex = re.compile('<td(.*?)<a[^>]+href=["\'](.*?)["\']', re.IGNORECASE)
 	#list of all links from the webpage
 	return webpage_regex.findall(html)
 
@@ -80,10 +89,27 @@ class Throttle:
 				time.sleep(sleep_secs)
 		#update the last accessed time
 		self.domains[domain] = datetime.datetime.now()	
-	
+
+class ScrapeCallback:
+	def __init__(self):
+		self.writer = csv.writer(open('countries.csv','w+'))
+		self.fields = ['area','population','iso','country','capital',
+		               'continent','tld','currency_code','currency_name',
+		               'phone','postal_code_format','postal_code_regex',
+		               'languages','neighbours']
+		self.writer.writerow(self.fields)
+		
+	def __call__(self, url, html):
+		if re.search('/view/',url):
+			tree = lxml.html.fromstring(html)
+			row = []
+			for field in self.fields:
+				row.append(tree.cssselect('table>tr#places_{}__row>td.w2p_fw'.format(field))[0].text_content())
+			self.writer.writerow(row)
+				
 		
 if __name__ == '__main__':
 	#test_function('http://example.webscraping.com',get_links,'/(index|view)')
-	link_crawler('http://example.webscraping.com','/view')
+	link_crawler('http://example.webscraping.com','/view/',scrape_callback = ScrapeCallback())
 	#crawl_sitemap('http://example.webscraping.com')
 	
