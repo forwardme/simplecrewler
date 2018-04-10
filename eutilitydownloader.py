@@ -15,6 +15,7 @@ summary_result = urlopen(summary_query).read()
 summarytree = etree.fromstring(summary_result)
 itemname = ['PMID']
 itemname += summarytree.xpath(r'//DocSum[1]/Item/@Name')
+itemname.append('Abstract')
 DocSum_objs = summarytree.xpath(r'//DocSum')
 print 'saving result to file...'
 with open(r'download.csv','wb') as file:
