@@ -1,12 +1,18 @@
 import re
 import urllib2
+from urllib2 import HTTPError,URLError
 import csv
 
 articlelist = []
 for i in range(1):
 	object_url = 'http://172.20.1.12/cms/ArticleList_jdey.aspx?LMID=A&page=' + str(i+1)
 	print 'crawling page '+ str(i+1)
-	html = urllib2.urlopen(object_url).read()
+	try:
+		html = urllib2.urlopen(object_url).read()
+	except HTTPError as e:
+		print 'HTTPError: ',e
+	except URLError as e:
+		print 'URLError: ',e
 	articlelist.extend(re.findall(r'<td.*?href="(.*?)" *title="(.*?)"',html))
 
 print 'articlelist length is', len(articlelist)
