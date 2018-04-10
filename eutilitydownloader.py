@@ -24,6 +24,7 @@ with open(r'download.csv','wb') as file:
 		text_content_list = [doc.xpath(r'./Id')[0].text]
 		items = [item for item in doc.xpath(r'./Item')]
 		text_content_list += [''.join(x.itertext()) for x in items]
+		print 'downloading abstract of PMID: ',text_content_list[0]
 		abstract_xml = urlopen('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=%s&retmode=xml'%text_content_list[0]).read()
 		abstract_tag = etree.fromstring(abstract_xml).xpath(r'//AbstractText')
 		if abstract_tag:
