@@ -57,3 +57,6 @@ with open(r'D:\SoftwareBackup2017-5-10\simplecrewler\articlelist.txt','wb') as h
 		handle.write(art+'\n')
 print 'write to file'	
 
+
+
+
