@@ -2,7 +2,7 @@
 import time
 
 driver = webdriver.Chrome('/Users/gaoyuan/MyStuff/webscrap/simplecrewler/chromedriver')
-driver.get('http://www.google.com')
+driver.get('http://www.google.comn')
 time.sleep(5)
 search_box = driver.find_element_by_name('q')
 search_box.send_keys('ChromeDriver')
