@@ -15,7 +15,7 @@ summary_result = urlopen(summary_query).read()
 summarytree = etree.fromstring(summary_result)
 itemname = ['PMID']
 itemname += summarytree.xpath(r'//DocSum[1]/Item/@Name')
-itemname.append('Abstract')
+
 DocSum_objs = summarytree.xpath(r'//DocSum')
 print 'saving result to file...'
 with open(r'download.csv','wb') as file:
@@ -27,8 +27,15 @@ with open(r'download.csv','wb') as file:
 		text_content_list += [''.join(x.itertext()) for x in items]
 		print 'downloading abstract of PMID: ',text_content_list[0]
 		abstract_xml = urlopen('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=%s&retmode=xml'%text_content_list[0]).read()
-		abstract_tag = etree.fromstring(abstract_xml).xpath(r'//AbstractText')
+		abstract_tag = etree.fromstring(abstract_xml).xpath(r'//Abstract')
 		if abstract_tag:
-			text_content_list.append(abstract_tag[0].text)
+			sub_ab_tag = abstract_tag[0].xpath(r'./AbstractText')
+			abstract = ''
+			for sub in sub_ab_tag:
+				if sub.attrib:
+					abstract += sub.attrib['Label'] + sub.text
+				else:
+					abstract += sub.text
+			text_content_list.append(abstract)
 		csvwriter.writerow([s.encode('utf-8','ignore') for s in text_content_list])
 print 'Done!'
